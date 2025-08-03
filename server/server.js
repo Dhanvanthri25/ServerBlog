@@ -17,13 +17,30 @@ connectDB();
 
 const app = express();
 
-// Middleware
+// Parse allowed origins from .env
+const allowedOrigins = process.env.CLIENT_URL?.split(',') || [];
+
+// Debugging: log the origin of each request
+app.use((req, res, next) => {
+  console.log('Request Origin:', req.headers.origin);
+  next();
+});
+
+// CORS middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like curl or mobile apps)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.error(`Blocked by CORS: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
-
+// Body parser middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -49,11 +66,11 @@ app.use('*', (req, res) => {
   });
 });
 
-// Error handling middleware
+// Global error handler
 app.use(errorHandler);
 
+// Start server
 const PORT = process.env.PORT || 5000;
-
 app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.CLIENT_URL} mode on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
